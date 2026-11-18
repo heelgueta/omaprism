@@ -24,6 +24,7 @@ CONFIG_DIR = HOME / ".config" / "omarchy"
 CONFIG_FILE = CONFIG_DIR / "omaprism.json"
 STATE_DIR = HOME / ".local" / "state" / "omarchy" / "omaprism"
 STATE_FILE = STATE_DIR / "current.json"
+CACHE_FILE = STATE_DIR / "cache.json"
 OMARCHY_PATH = Path(os.getenv("OMARCHY_PATH", "/usr/share/omarchy"))
 USER_THEMES_PATH = HOME / ".config" / "omarchy" / "themes"
 SYSTEM_THEMES_PATH = OMARCHY_PATH / "themes"
@@ -70,11 +71,51 @@ def ensure_config():
 
 
 def save_config(cfg):
-    """Save config file safely."""
+    """Save config file safely and refresh the in-memory cache file."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     temp_file = CONFIG_DIR / "omaprism.json.tmp"
     temp_file.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
     temp_file.replace(CONFIG_FILE)
+    rebuild_cache(cfg)
+
+
+def rebuild_cache(cfg=None):
+    """Compile all theme assets, raw colors, accents, and wallpapers into an instant in-memory JSON cache."""
+    if cfg is None:
+        cfg = ensure_config()
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    cache = {}
+    for ws_str, ws_info in cfg.get("workspaces", {}).items():
+        theme = ws_info.get("theme", "")
+        tdir = find_theme_dir(theme)
+        colors_raw = ""
+        accent = ws_info.get("accent", "#ffffff")
+        if tdir:
+            cfile = tdir / "colors.toml"
+            if cfile.is_file():
+                try:
+                    colors_raw = cfile.read_text(encoding="utf-8")
+                    if "accent" not in ws_info:
+                        data = tomllib.loads(colors_raw)
+                        accent = data.get("accent", data.get("color4", "#ffffff"))
+                except Exception:
+                    pass
+
+        wp = ws_info.get("wallpaper")
+        if not wp and tdir:
+            _, _, wp = get_theme_assets(theme)
+
+        cache[ws_str] = {
+            "theme": theme,
+            "name": ws_info.get("name", f"WS {ws_str}"),
+            "accent": accent,
+            "colorsRaw": colors_raw,
+            "wallpaper": wp or "",
+            "wallpaperUrl": f"file://{wp}" if wp else ""
+        }
+
+    CACHE_FILE.write_text(json.dumps(cache, indent=2) + "\n", encoding="utf-8")
+    return cache
 
 
 def get_hyprland_socket2():
@@ -563,6 +604,9 @@ def main():
     p_init = sub.add_parser("init", help="Initialize configuration file")
     p_init.add_argument("--force", action="store_true", help="Overwrite existing config")
 
+    # cache
+    sub.add_parser("cache", help="Rebuild fast in-memory cache file")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -587,6 +631,9 @@ def main():
         cmd_menu(args)
     elif args.command == "gui":
         cmd_gui(args)
+    elif args.command == "cache":
+        rebuild_cache()
+        print(f"\033[32m✔\033[0m Rebuilt fast RAM cache at {CACHE_FILE}")
     elif args.command == "init":
         if args.force and CONFIG_FILE.exists():
             CONFIG_FILE.unlink()
