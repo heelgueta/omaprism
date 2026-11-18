@@ -10,54 +10,54 @@
   "fullThemeDebounceMs": 500,
   "workspaces": {
     "1": {
-      "theme": "osaka-jade",
-      "name": "Code",
-      "accent": "#509475"
+      "theme": "ristretto",
+      "name": "Red • Coral",
+      "accent": "#f38d70"
     },
     "2": {
-      "theme": "tokyo-night",
-      "name": "Web",
-      "accent": "#7aa2f7"
+      "theme": "retro-82",
+      "name": "Orange • Retro",
+      "accent": "#faa968"
     },
     "3": {
-      "theme": "catppuccin",
-      "name": "Chat",
-      "accent": "#89b4fa"
+      "theme": "gruvbox",
+      "name": "Yellow • Amber",
+      "accent": "#d8a657"
     },
     "4": {
-      "theme": "gruvbox",
-      "name": "DevOps",
-      "accent": "#7daea3"
+      "theme": "hackerman",
+      "name": "Green • Neon",
+      "accent": "#82FB9C"
     },
     "5": {
-      "theme": "nord",
-      "name": "Notes",
-      "accent": "#81a1c1"
+      "theme": "osaka-jade",
+      "name": "Jade • Forest",
+      "accent": "#509475"
     },
     "6": {
-      "theme": "rose-pine",
-      "name": "Media",
-      "accent": "#56949f"
+      "theme": "nord",
+      "name": "Cyan • Frost",
+      "accent": "#88c0d0"
     },
     "7": {
-      "theme": "kanagawa",
-      "name": "Design",
-      "accent": "#dcd7ba"
+      "theme": "catppuccin",
+      "name": "Blue • Sapphire",
+      "accent": "#89b4fa"
     },
     "8": {
-      "theme": "everforest",
-      "name": "Docs",
-      "accent": "#7fbbb3"
+      "theme": "tokyo-night",
+      "name": "Indigo • Night",
+      "accent": "#7aa2f7"
     },
     "9": {
-      "theme": "hackerman",
-      "name": "Terminal",
-      "accent": "#82FB9C"
+      "theme": "ethereal",
+      "name": "Violet • Purple",
+      "accent": "#7d82d9"
     },
     "10": {
       "theme": "matte-black",
-      "name": "Zen",
-      "accent": "#e68e0d"
+      "name": "Dark • Stealth",
+      "accent": "#8d8d8d"
     }
   }
 }
