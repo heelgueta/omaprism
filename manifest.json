@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "heelgueta.omaprism",
+  "name": "Omaprism",
+  "version": "1.0.0",
+  "author": "heelgueta",
+  "license": "MIT",
+  "description": "Prismatic per-workspace theming and visual cues for Omarchy and Hyprland.",
+  "kinds": [
+    "service",
+    "panel",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "Service.qml",
+    "panel": "Panel.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Omaprism",
+    "description": "Per-workspace theme & color badge",
+    "category": "Compositor",
+    "allowMultiple": false,
+    "defaultSection": "left"
+  }
+}

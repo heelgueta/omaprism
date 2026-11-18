@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "enabled": true,
+  "mode": "fast",
+  "transition": "instant",
+  "changeWallpaper": true,
+  "changeBorders": true,
+  "changeShell": true,
+  "changeTerminals": true,
+  "fullThemeDebounceMs": 500,
+  "workspaces": {
+    "1": {
+      "theme": "osaka-jade",
+      "name": "Code",
+      "accent": "#509475"
+    },
+    "2": {
+      "theme": "tokyo-night",
+      "name": "Web",
+      "accent": "#7aa2f7"
+    },
+    "3": {
+      "theme": "catppuccin",
+      "name": "Chat",
+      "accent": "#89b4fa"
+    },
+    "4": {
+      "theme": "gruvbox",
+      "name": "DevOps",
+      "accent": "#7daea3"
+    },
+    "5": {
+      "theme": "nord",
+      "name": "Notes",
+      "accent": "#81a1c1"
+    },
+    "6": {
+      "theme": "rose-pine",
+      "name": "Media",
+      "accent": "#56949f"
+    },
+    "7": {
+      "theme": "kanagawa",
+      "name": "Design",
+      "accent": "#dcd7ba"
+    },
+    "8": {
+      "theme": "everforest",
+      "name": "Docs",
+      "accent": "#7fbbb3"
+    },
+    "9": {
+      "theme": "hackerman",
+      "name": "Terminal",
+      "accent": "#82FB9C"
+    },
+    "10": {
+      "theme": "matte-black",
+      "name": "Zen",
+      "accent": "#e68e0d"
+    }
+  }
+}
