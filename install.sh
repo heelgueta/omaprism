@@ -47,7 +47,13 @@ echo "✔ Installed desktop entry: $desktop_dest"
 "$bin_dest" init >/dev/null
 echo "✔ Configuration verified at ~/.config/omarchy/omaprism.json"
 
-# 6. Rescan plugins in shell
+# 6. Install theme-set automation hook
+mkdir -p "$HOME/.config/omarchy/hooks/theme-set.d"
+cp -f "$repo/hooks/theme-set" "$HOME/.config/omarchy/hooks/theme-set.d/omaprism"
+chmod +x "$HOME/.config/omarchy/hooks/theme-set.d/omaprism"
+echo "✔ Installed theme-set hook: ~/.config/omarchy/hooks/theme-set.d/omaprism"
+
+# 7. Rescan plugins in shell
 if pgrep -f "quickshell.*omarchy/shell" >/dev/null; then
   omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
 fi

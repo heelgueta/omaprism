@@ -468,6 +468,45 @@ def cmd_menu(args):
         apply_workspace(ws_id, force=True)
 
 
+def cmd_pick(args):
+    """Open Omarchy's graphical theme switcher and assign chosen theme to active workspace."""
+    ws = args.workspace if args.workspace else get_active_workspace()
+    try:
+        res = subprocess.run(["omarchy-theme-switcher"], stdout=subprocess.PIPE, text=True)
+        theme = res.stdout.strip()
+        if theme:
+            args_set = argparse.Namespace(workspace=ws, theme=theme, name=None, accent=None, wallpaper=None)
+            cmd_set(args_set)
+    except Exception as e:
+        print(f"omaprism pick error: {e}", file=sys.stderr)
+
+
+def cmd_sync_hook(args):
+    """Callback triggered by Omarchy theme-set hook to keep active workspace in sync."""
+    theme = args.theme
+    if not theme:
+        return
+    ws = get_active_workspace()
+    cfg = ensure_config()
+    workspaces = cfg.setdefault("workspaces", {})
+    ws_entry = workspaces.setdefault(str(ws), {})
+    theme_slug = theme.lower().replace(" ", "-")
+    ws_entry["theme"] = theme_slug
+    _, accent, _ = get_theme_assets(theme_slug)
+    ws_entry["accent"] = accent
+    save_config(cfg)
+
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    new_state = {
+        "workspace": ws,
+        "theme": theme_slug,
+        "name": ws_entry.get("name", f"Workspace {ws}"),
+        "accent": accent,
+        "updated_at": time.time()
+    }
+    STATE_FILE.write_text(json.dumps(new_state, indent=2) + "\n", encoding="utf-8")
+
+
 def cmd_gui(args):
     """Summon Omarchy shell panel for Omaprism."""
     subprocess.run(["omarchy-shell", "shell", "summon", "heelgueta.omaprism", "{}"], timeout=2)
@@ -485,6 +524,14 @@ def main():
     p_apply.add_argument("workspace", type=int, nargs="?", help="Workspace ID (1-10)")
     p_apply.add_argument("--instant", action="store_true", help="Instant switch without animation")
     p_apply.add_argument("--force", action="store_true", help="Force re-apply even if already active")
+
+    # pick
+    p_pick = sub.add_parser("pick", help="Open visual theme selector and assign to active workspace")
+    p_pick.add_argument("workspace", type=int, nargs="?", help="Workspace ID (defaults to active)")
+
+    # sync-hook
+    p_sync = sub.add_parser("sync-hook", help="Internal hook called on Omarchy theme-set")
+    p_sync.add_argument("theme", type=str, help="Theme name")
 
     # set
     p_set = sub.add_parser("set", help="Assign a theme to a workspace")
@@ -524,6 +571,10 @@ def main():
 
     if args.command == "apply":
         cmd_apply(args)
+    elif args.command == "pick":
+        cmd_pick(args)
+    elif args.command == "sync-hook":
+        cmd_sync_hook(args)
     elif args.command == "set":
         cmd_set(args)
     elif args.command == "get":

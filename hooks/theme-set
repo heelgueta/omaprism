@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Omaprism theme-set hook:
+# Automatically keeps the active workspace in sync whenever an Omarchy theme
+# is applied via Omarchy menu, keybindings, or CLI.
+
+THEME_NAME="$1"
+
+if command -v omaprism >/dev/null 2>&1; then
+  omaprism sync-hook "$THEME_NAME" >/dev/null 2>&1 || true
+fi

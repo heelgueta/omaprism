@@ -26,6 +26,11 @@ if [[ -f $desktop_dest ]]; then
   echo "✔ Removed desktop entry: $desktop_dest"
 fi
 
+if [[ -f "$HOME/.config/omarchy/hooks/theme-set.d/omaprism" ]]; then
+  rm -f "$HOME/.config/omarchy/hooks/theme-set.d/omaprism"
+  echo "✔ Removed theme-set hook"
+fi
+
 if pgrep -f "quickshell.*omarchy/shell" >/dev/null; then
   omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
 fi
