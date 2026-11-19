@@ -239,6 +239,38 @@ def apply_theme_osc_to_foot(theme_name):
         pass
 
 
+def update_omarchy_current_state(theme_name, wallpaper_path):
+    """Keep ~/.local/state/omarchy/current in sync with the active workspace theme and wallpaper."""
+    current_dir = HOME / ".local" / "state" / "omarchy" / "current"
+    current_dir.mkdir(parents=True, exist_ok=True)
+
+    theme_slug = theme_name.lower().replace(" ", "-") if theme_name else ""
+    if theme_slug:
+        # 1. Update theme.name
+        (current_dir / "theme.name").write_text(theme_slug + "\n", encoding="utf-8")
+
+        # 2. Update theme directory symlink
+        theme_dir = find_theme_dir(theme_slug)
+        if theme_dir:
+            theme_link = current_dir / "theme"
+            if theme_link.is_symlink() or not theme_link.exists():
+                theme_link.unlink(missing_ok=True)
+                theme_link.symlink_to(theme_dir)
+            elif theme_link.is_dir():
+                import shutil
+                try:
+                    shutil.rmtree(theme_link)
+                    theme_link.symlink_to(theme_dir)
+                except Exception:
+                    pass
+
+    # 3. Update background symlink
+    if wallpaper_path and Path(wallpaper_path).exists():
+        bg_link = current_dir / "background"
+        bg_link.unlink(missing_ok=True)
+        bg_link.symlink_to(wallpaper_path)
+
+
 def apply_workspace(ws_id, instant=None, force=False):
     """Apply theme for given workspace ID."""
     cfg = ensure_config()
@@ -319,6 +351,7 @@ def apply_workspace(ws_id, instant=None, force=False):
         "updated_at": time.time()
     }
     STATE_FILE.write_text(json.dumps(new_state, indent=2) + "\n", encoding="utf-8")
+    update_omarchy_current_state(theme, wallpaper)
 
     # 5. Full mode (system-wide theme switch)
     if cfg.get("mode") == "full":
@@ -548,6 +581,62 @@ def cmd_sync_hook(args):
     STATE_FILE.write_text(json.dumps(new_state, indent=2) + "\n", encoding="utf-8")
 
 
+def cmd_sync_state(args):
+    """Synchronize Omarchy state links and Foot terminals for active workspace."""
+    ws_id = args.workspace if args.workspace else get_active_workspace()
+    cfg = ensure_config()
+    ws_cfg = cfg.get("workspaces", {}).get(str(ws_id), {})
+    if not ws_cfg:
+        return
+    theme = ws_cfg.get("theme", "")
+    accent = ws_cfg.get("accent", "")
+    wallpaper = ws_cfg.get("wallpaper", "")
+    if not wallpaper and theme:
+        _, _, wallpaper = get_theme_assets(theme)
+
+    if theme:
+        update_omarchy_current_state(theme, wallpaper)
+
+    if cfg.get("changeTerminals", True) and theme:
+        apply_theme_osc_to_foot(theme)
+
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    new_state = {
+        "workspace": ws_id,
+        "theme": theme,
+        "name": ws_cfg.get("name", f"Workspace {ws_id}"),
+        "accent": accent,
+        "wallpaper": wallpaper,
+        "updated_at": time.time()
+    }
+    STATE_FILE.write_text(json.dumps(new_state, indent=2) + "\n", encoding="utf-8")
+
+
+def cmd_set_wallpaper(args):
+    """Record selected wallpaper for the active workspace."""
+    ws_id = args.workspace if args.workspace else get_active_workspace()
+    wp_path = args.path
+    if not wp_path:
+        bg_link = HOME / ".local" / "state" / "omarchy" / "current" / "background"
+        if bg_link.exists():
+            try:
+                wp_path = str(bg_link.resolve())
+            except Exception:
+                pass
+    if not wp_path or not Path(wp_path).exists():
+        return
+
+    cfg = ensure_config()
+    ws_str = str(ws_id)
+    ws_entry = cfg.setdefault("workspaces", {}).setdefault(ws_str, {})
+    if ws_entry.get("wallpaper") == wp_path:
+        return
+
+    ws_entry["wallpaper"] = wp_path
+    save_config(cfg)
+    print(f"\033[32m✔\033[0m Saved wallpaper for workspace {ws_id}: {wp_path}")
+
+
 def cmd_gui(args):
     """Summon Omarchy shell panel for Omaprism."""
     subprocess.run(["omarchy-shell", "shell", "summon", "heelgueta.omaprism", "{}"], timeout=2)
@@ -573,6 +662,15 @@ def main():
     # sync-hook
     p_sync = sub.add_parser("sync-hook", help="Internal hook called on Omarchy theme-set")
     p_sync.add_argument("theme", type=str, help="Theme name")
+
+    # sync-state
+    p_sync_state = sub.add_parser("sync-state", help="Sync Omarchy state links for active workspace")
+    p_sync_state.add_argument("workspace", type=int, nargs="?", help="Workspace ID")
+
+    # set-wallpaper
+    p_set_wp = sub.add_parser("set-wallpaper", help="Save wallpaper to workspace")
+    p_set_wp.add_argument("path", type=str, nargs="?", help="Wallpaper path")
+    p_set_wp.add_argument("--workspace", type=int, help="Target workspace ID")
 
     # set
     p_set = sub.add_parser("set", help="Assign a theme to a workspace")
@@ -619,6 +717,10 @@ def main():
         cmd_pick(args)
     elif args.command == "sync-hook":
         cmd_sync_hook(args)
+    elif args.command == "sync-state":
+        cmd_sync_state(args)
+    elif args.command == "set-wallpaper":
+        cmd_set_wallpaper(args)
     elif args.command == "set":
         cmd_set(args)
     elif args.command == "get":

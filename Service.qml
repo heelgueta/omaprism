@@ -13,10 +13,12 @@ Item {
 
   readonly property string home: Quickshell.env("HOME")
   readonly property string cacheFilePath: home + "/.local/state/omarchy/omaprism/cache.json"
+  readonly property string currentBgPath: home + "/.local/state/omarchy/current/background"
 
   property var workspaceCache: ({})
   property var wallpaperUrls: []
   property int currentWorkspaceId: -1
+  property bool switchingInternal: false
 
   // Watch fast in-memory cache compiled by omaprism
   FileView {
@@ -34,7 +36,7 @@ Item {
       var data = JSON.parse(raw)
       root.workspaceCache = data
 
-      // Extract unique wallpaper URLs to warm into RAM
+      // Extract unique wallpaper URLs to warm into RAM texture cache
       var urls = []
       for (var ws in data) {
         if (data[ws].wallpaperUrl && urls.indexOf(data[ws].wallpaperUrl) === -1) {
@@ -47,7 +49,7 @@ Item {
     }
   }
 
-  // Preload and pin all workspace wallpapers directly into Qt Quick's in-memory image cache
+  // Preload and pin all workspace wallpapers directly into Qt Quick's in-RAM texture cache
   Repeater {
     model: root.wallpaperUrls
     Item {
@@ -64,11 +66,13 @@ Item {
   }
 
   function handleWorkspaceChanged(wsId) {
-    if (!wsId || wsId <= 0 || wsId === currentWorkspaceId) return
+    if (!wsId || wsId <= 0 || wsId > 10 || wsId === currentWorkspaceId) return
     currentWorkspaceId = wsId
 
     var cached = root.workspaceCache[String(wsId)]
     if (!cached) return
+
+    root.switchingInternal = true
 
     // 1. Instant palette application in RAM (0ms latency)
     if (cached.colorsRaw) {
@@ -87,28 +91,72 @@ Item {
       Quickshell.execDetached(["hyprctl", "eval", luaCmd])
     }
 
-    // 4. Background state sync (terminal OSC recolor, state persistence)
-    Quickshell.execDetached(["omaprism", "apply", String(wsId), "--instant"])
+    // 4. Update Omarchy's ~/.local/state/omarchy/current symlinks in background
+    // so SUPER+CTRL+SPACE immediately shows backgrounds for the active workspace's theme!
+    Quickshell.execDetached(["omaprism", "sync-state", String(wsId)])
+
+    switchGuardTimer.restart()
   }
 
-  // Reactive listener on Hyprland focused workspace property
-  readonly property var focusedWs: Hyprland.focusedWorkspace
-  onFocusedWsChanged: {
-    if (focusedWs && focusedWs.id) {
-      handleWorkspaceChanged(focusedWs.id)
+  Timer {
+    id: switchGuardTimer
+    interval: 350
+    repeat: false
+    onTriggered: {
+      root.switchingInternal = false
     }
   }
 
-  // Fallback listener for raw workspace switch events
+  // Watch for user background changes via SUPER + CTRL + SPACE (omarchy-theme-bg-switcher)
+  FileView {
+    id: userBgWatcher
+    path: root.currentBgPath
+    watchChanges: true
+    onFileChanged: {
+      if (!root.switchingInternal && root.currentWorkspaceId > 0) {
+        bgSaveTimer.restart()
+      }
+    }
+  }
+
+  Timer {
+    id: bgSaveTimer
+    interval: 250
+    repeat: false
+    onTriggered: {
+      Quickshell.execDetached(["omaprism", "set-wallpaper"])
+    }
+  }
+
+  // 1. Raw event listener for INSTANT detection (handles empty/new workspaces with 0ms delay)
   Connections {
     target: Hyprland
     function onRawEvent(event) {
       var name = String(event && event.name ? event.name : "")
-      if (name === "workspace" || name === "focusedmon") {
-        if (Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.id) {
-          handleWorkspaceChanged(Hyprland.focusedWorkspace.id)
+      if (name === "workspace" || name === "createworkspace") {
+        var raw = String(event.data || "").trim()
+        var parts = raw.split(",")
+        var id = parseInt(parts[0])
+        if (!isNaN(id) && id > 0 && id <= 10) {
+          root.handleWorkspaceChanged(id)
+        }
+      } else if (name === "focusedmon") {
+        var monParts = String(event.data || "").split(",")
+        if (monParts.length >= 2) {
+          var monId = parseInt(monParts[1].trim())
+          if (!isNaN(monId) && monId > 0 && monId <= 10) {
+            root.handleWorkspaceChanged(monId)
+          }
         }
       }
+    }
+  }
+
+  // 2. Secondary reactive listener on Quickshell's Hyprland focusedWorkspace property
+  readonly property var focusedWs: Hyprland.focusedWorkspace
+  onFocusedWsChanged: {
+    if (focusedWs && focusedWs.id) {
+      root.handleWorkspaceChanged(focusedWs.id)
     }
   }
 
