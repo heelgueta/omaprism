@@ -634,7 +634,64 @@ def cmd_set_wallpaper(args):
 
     ws_entry["wallpaper"] = wp_path
     save_config(cfg)
+    try:
+        subprocess.run(
+            ["qs", "ipc", "-n", "-p", str(OMARCHY_PATH / "shell"), "call", "--", "omaprism", "reloadCache"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1
+        )
+    except Exception:
+        pass
     print(f"\033[32m✔\033[0m Saved wallpaper for workspace {ws_id}: {wp_path}")
+
+
+def cmd_fast_switch(args):
+    """Atomic, ordered workspace switch: sets wallpaper, updates symlinks, and recolors terminals."""
+    ws_id = args.workspace
+    cfg = ensure_config()
+    ws_cfg = cfg.get("workspaces", {}).get(str(ws_id), {})
+    if not ws_cfg:
+        return
+
+    theme = ws_cfg.get("theme", "")
+    accent = ws_cfg.get("accent", "")
+    wallpaper = ws_cfg.get("wallpaper", "")
+    if not wallpaper and theme:
+        _, _, wallpaper = get_theme_assets(theme)
+
+    # 1. Update wallpaper in Background.qml via quickshell IPC (setInstant)
+    if wallpaper and cfg.get("changeWallpaper", True):
+        subprocess.run(
+            ["qs", "ipc", "-n", "-p", str(OMARCHY_PATH / "shell"), "call", "--", "background", "setInstant", wallpaper],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1
+        )
+
+    # 2. Update Omarchy's ~/.local/state/omarchy/current symlinks
+    if theme:
+        update_omarchy_current_state(theme, wallpaper)
+
+    # 3. Update active window borders in Hyprland
+    if accent and cfg.get("changeBorders", True):
+        lua_cmd = f"hl.config({{ general = {{ col = {{ active_border = '{accent}' }} }}, group = {{ col = {{ border_active = '{accent}' }} }} }})"
+        subprocess.run(
+            ["hyprctl", "eval", lua_cmd],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1
+        )
+
+    # 4. Update foot terminals
+    if cfg.get("changeTerminals", True) and theme:
+        apply_theme_osc_to_foot(theme)
+
+    # 5. Update state file
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    new_state = {
+        "workspace": ws_id,
+        "theme": theme,
+        "name": ws_cfg.get("name", f"WS {ws_id}"),
+        "accent": accent,
+        "wallpaper": wallpaper,
+        "updated_at": time.time()
+    }
+    STATE_FILE.write_text(json.dumps(new_state, indent=2) + "\n", encoding="utf-8")
 
 
 def cmd_gui(args):
@@ -671,6 +728,10 @@ def main():
     p_set_wp = sub.add_parser("set-wallpaper", help="Save wallpaper to workspace")
     p_set_wp.add_argument("path", type=str, nargs="?", help="Wallpaper path")
     p_set_wp.add_argument("--workspace", type=int, help="Target workspace ID")
+
+    # fast-switch
+    p_fast_sw = sub.add_parser("fast-switch", help="Atomic, ordered workspace switch")
+    p_fast_sw.add_argument("workspace", type=int, help="Target workspace ID")
 
     # set
     p_set = sub.add_parser("set", help="Assign a theme to a workspace")
@@ -721,6 +782,8 @@ def main():
         cmd_sync_state(args)
     elif args.command == "set-wallpaper":
         cmd_set_wallpaper(args)
+    elif args.command == "fast-switch":
+        cmd_fast_switch(args)
     elif args.command == "set":
         cmd_set(args)
     elif args.command == "get":

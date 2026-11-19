@@ -53,7 +53,12 @@ cp -f "$repo/hooks/theme-set" "$HOME/.config/omarchy/hooks/theme-set.d/omaprism"
 chmod +x "$HOME/.config/omarchy/hooks/theme-set.d/omaprism"
 echo "✔ Installed theme-set hook: ~/.config/omarchy/hooks/theme-set.d/omaprism"
 
-# 7. Rescan plugins in shell
+# 7. Install menu extension for wallpaper persistence (SUPER+CTRL+SPACE)
+mkdir -p "$HOME/.config/omarchy/extensions"
+cp -f "$repo/extensions/omarchy-menu.jsonc" "$HOME/.config/omarchy/extensions/omarchy-menu.jsonc"
+echo "✔ Configured background switcher in ~/.config/omarchy/extensions/omarchy-menu.jsonc"
+
+# 8. Rescan plugins in shell
 if pgrep -f "quickshell.*omarchy/shell" >/dev/null; then
   omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
 fi

@@ -1,0 +1,7 @@
+{
+  // Omarchy menu user extensions: capture background selection for Omaprism
+
+  "style.background": {
+    "action": "background=$(omarchy-theme-bg-switcher); if [[ -n $background ]]; then omaprism set-wallpaper \"$background\"; omarchy-theme-bg-set \"$background\"; fi"
+  }
+}
