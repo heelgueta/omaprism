@@ -1,26 +1,32 @@
 # Omaprism
 
-**Omaprism** brings per-workspace theming and distinct visual cues to Omarchy on Hyprland.
+**Omaprism** brings per-workspace visual cues to Omarchy on Hyprland with zero lag.
 
-Switching between workspaces (`SUPER+1` through `SUPER+0`) dynamically transitions your environment to designated colorways and themes, giving you an immediate visual cue for what context you are currently in (e.g. Code, Browser, Messaging, Media, DevOps).
+Switching between workspaces (`SUPER+1` through `SUPER+0`) dynamically transitions your active window borders to designated colorways and themes, giving you an immediate visual cue for what context you are currently in (e.g. Code, Browser, Messaging, Media, DevOps) without stuttering or interfering with Omarchy's background switching.
+
+> **Note on Architecture**: For a detailed analysis of our experiments with full Wayland layer-shell wallpaper swapping, dynamic workspace lifecycles, and why border colorways provide the smoothest experience, see [RETROSPECTIVE.md](RETROSPECTIVE.md).
+
+## Features
+
+- **Ultra-Fast Visual Cues (<1ms)**: Immediate active border updates across all 10 workspaces via direct compositor evaluation (`hyprctl eval`).
+- **Compositor Friendly**: Zero GPU texture swapping or layer-shell hitching during workspace slide animations.
+- **Empty & Non-Empty Workspace Support**: Responds to raw compositor socket events (`workspace>>ID`, `createworkspace>>ID`), ensuring even empty workspaces colorize instantly as soon as you focus or spawn windows in them.
+- **Native Keybinding Preservation**: Leaves Omarchy's native `SUPER + CTRL + SPACE` background switcher and theme engine untouched and 100% functional.
+- **Spectrum Presets**: Defaults to an orderly ROYGBIV/spectrum palette across workspaces 1–10.
 
 ## Architecture
 
-Omaprism integrates with Omarchy through two components:
+1. **Omarchy Shell Plugin (`Service.qml`, `BarWidget.qml`)**:
+   - Subscribes to Hyprland raw socket events in Quickshell.
+   - Evaluates active window border colors in under 1ms.
+   - Optionally displays the active workspace indicator on the Omarchy bar.
 
-1. **Omarchy Shell Plugin (`Service.qml`, `Panel.qml`, `BarWidget.qml`)**:
-   - Hooks reactively into Hyprland's `focusedWorkspace` in Quickshell.
-   - Updates status bar palette and wallpaper with near-zero latency (~50ms) using internal shell IPC (`applyTheme` and `themeTransition` / `setInstant`).
-   - Dynamically recolors Hyprland active window borders using `hyprctl eval`.
-   - Optionally reflects the workspace theme name and accent dot on the status bar.
-   - Provides a GUI panel (`Panel.qml`) summoned from the launcher or bar.
-
-2. **CLI & Daemon (`bin/omaprism`)**:
-   - `omaprism apply <id>`: Applies visual settings for the target workspace.
+2. **CLI (`bin/omaprism`)**:
+   - `omaprism apply <id>`: Manually applies visual settings for the target workspace.
    - `omaprism list`: Displays current workspace mapping and active state.
    - `omaprism set <id> <theme>`: Reassigns a workspace's theme and custom label.
    - `omaprism menu`: Interactive terminal selection menu powered by `gum`.
-   - `omaprism daemon`: Standalone background listener for Hyprland `socket2.sock` if run independently of the shell plugin.
+   - `omaprism cache`: Compiles colors and palettes into fast-load JSON.
 
 ## Installation
 
@@ -41,17 +47,17 @@ To also place the Omaprism status widget onto your Omarchy bar:
 
 Configuration is stored in `~/.config/omarchy/omaprism.json`.
 
-Default assignments:
-- Workspace 1: `osaka-jade` (Code)
-- Workspace 2: `tokyo-night` (Web)
-- Workspace 3: `catppuccin` (Chat)
-- Workspace 4: `gruvbox` (DevOps)
-- Workspace 5: `nord` (Notes)
-- Workspace 6: `rose-pine` (Media)
-- Workspace 7: `kanagawa` (Design)
-- Workspace 8: `everforest` (Docs)
-- Workspace 9: `hackerman` (Terminal)
-- Workspace 10: `matte-black` (Zen)
+Default assignments (Rainbow / Spectrum):
+- Workspace 1: `ristretto` (Red / Coral)
+- Workspace 2: `gruvbox` (Orange / Ochre)
+- Workspace 3: `cyberpunk` (Yellow / Gold)
+- Workspace 4: `everforest` (Green)
+- Workspace 5: `osaka-jade` (Teal / Jade)
+- Workspace 6: `nord` (Cyan / Ice Blue)
+- Workspace 7: `tokyo-night` (Blue)
+- Workspace 8: `catppuccin` (Indigo / Lavender)
+- Workspace 9: `rose-pine` (Violet / Purple)
+- Workspace 10: `matte-black` (Monochrome / Zen)
 
 You can customize workspaces via:
 ```bash

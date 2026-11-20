@@ -1,13 +1,11 @@
 {
   "version": 1,
   "enabled": true,
-  "mode": "fast",
-  "transition": "instant",
-  "changeWallpaper": true,
+  "mode": "borders-only",
+  "changeWallpaper": false,
   "changeBorders": true,
-  "changeShell": true,
-  "changeTerminals": true,
-  "fullThemeDebounceMs": 500,
+  "changeShell": false,
+  "changeTerminals": false,
   "workspaces": {
     "1": {
       "theme": "ristretto",
